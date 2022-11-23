@@ -6,11 +6,18 @@ import dateutil.parser
 # this function let us get the data from the Slang's API
 def firstStep(url, headers):
     print("requesting to Slang API\n")
-    requestToAPISlang = requests(url, headers = headers)
-    responseOfAPISlang = requestToAPISlang.json()
-    print(f"Slang API's response: \n{responseOfAPISlang}")
-    
-    return responseOfAPISlang
+    try:
+        requestToAPISlang = requests.get(url, headers = headers)
+        if requestToAPISlang.status_code != 200:
+            raise Exception
+        responseOfAPISlang = requestToAPISlang.json()
+        print(f"Slang API's response: \n{responseOfAPISlang}")
+        
+        return responseOfAPISlang['activities']
+    except Exception:
+        print("The system cannot connect with Slang API")
+        return None
+        
 # Class that let us to process the receved data by the first step
 class SedondStep():
     def __init__(self,listActivities): # when the class is instantiated, the constructor receives the data
@@ -102,11 +109,9 @@ class SedondStep():
 
         # each list of user activities is sorted by user session
         for key,value in user_session_preProd.items(): # O(n*m) such that n depends on the number of users and m depends on the number of activities
-            print(key,value)
             user_session_preProd1[key] = self.getSessions(value)
-            print("\n")
-            print(user_session_preProd1[key])
-            print("\n")
+        
+        print(f"\nData processed: \n{user_session_preProd1}")
         
         return user_session_preProd1
     
@@ -117,9 +122,15 @@ class SedondStep():
     
 
 def thirdStep(url,headers,userSessions):
-    print("Sending the data processed to Slang's API\n")
-    requests.post(url,headers=headers,json=userSessions)
-
+    try:
+        print("Sending the data processed to Slang's API\n")
+        p = requests.post(url,headers=headers,json=userSessions)
+        return True
+        if p.status_code != 200:
+            raise  Exception
+    except Exception as e:
+        print("The data could not be sent to Slang API")
+        return False
 
 if __name__ == '__main__':
     url = "https://api.slangapp.com/challenges/v1/activities"
@@ -130,6 +141,11 @@ if __name__ == '__main__':
             }
     
     responseOfAPISlang = firstStep(url,headers) # get the data from Slang's API
-    s = SedondStep(responseOfAPISlang) # Processing the data 
-    thirdStep(url,headers,s.userSessions()) # Posting the data processed to Slang's API'
-    
+    if responseOfAPISlang != None:
+        s = SedondStep(responseOfAPISlang) # Processing the data 
+        if thirdStep(url,headers,s.userSessions()): # Posting the data processed to Slang's API'
+            print("The data has been processed and posted to Slang API successfully")
+        else:
+            print("Error")
+    else:
+        print("The data has not been processed and posted successfully")
