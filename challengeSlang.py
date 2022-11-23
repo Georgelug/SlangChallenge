@@ -1,5 +1,5 @@
 import requests
-# import json
+import json
 import dateutil.parser
 
 
@@ -111,9 +111,9 @@ class SedondStep():
         for key,value in user_session_preProd.items(): # O(n*m) such that n depends on the number of users and m depends on the number of activities
             user_session_preProd1[key] = self.getSessions(value)
         
-        print(f"\nData processed: \n{user_session_preProd1}")
+        # print(f"\nData processed: \n{user_session_preProd1}")
         
-        return user_session_preProd1
+        return {"user_sessions" : user_session_preProd1}
     
     # method that returns the data processed (dictionary of user sessions)
     def userSessions(self):
@@ -124,26 +124,30 @@ class SedondStep():
 def thirdStep(url,headers,userSessions):
     try:
         print("Sending the data processed to Slang's API\n")
-        p = requests.post(url,headers=headers,json=userSessions)
-        return True
-        if p.status_code != 200:
+        p = requests.post(url,headers=headers,data=json.dumps(userSessions))
+        print(p.status_code)
+        if p.status_code < 200 or p.status_code > 299:
             raise  Exception
+        return True
     except Exception as e:
         print("The data could not be sent to Slang API")
         return False
 
 if __name__ == '__main__':
-    url = "https://api.slangapp.com/challenges/v1/activities"
+    urlActivities = "https://api.slangapp.com/challenges/v1/activities"
+    urlSessions = "https://api.slangapp.com/challenges/v1/activities/sessions"
     
     headers = {
                 "Content-Type": "application/json", 
                 "Authorization":"Basic MTM4OmFaVlZ1MUdWVisxWTJOaTE1TW1RU3p0eEU1b045UElieTk4MFhvUWdMTms9"
             }
     
-    responseOfAPISlang = firstStep(url,headers) # get the data from Slang's API
+    responseOfAPISlang = firstStep(urlActivities,headers) # get the data from Slang's API
     if responseOfAPISlang != None:
         s = SedondStep(responseOfAPISlang) # Processing the data 
-        if thirdStep(url,headers,s.userSessions()): # Posting the data processed to Slang's API'
+        user_sessions = s.userSessions()
+        print(user_sessions)
+        if thirdStep(urlSessions,headers,user_sessions): # Posting the data processed to Slang's API'
             print("The data has been processed and posted to Slang API successfully")
         else:
             print("Error")
